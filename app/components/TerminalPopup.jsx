@@ -8,14 +8,11 @@ const TerminalPopup = ({ isOpen, onClose, email }) => {
 
   const terminalSequence = [
     { text: `$ algobuddy subscribe ${email}`, type: 'command' },
-    { text: '', type: 'break' },
-    { text: '[1/4] Validating email...', type: 'process' },
+    { text: '[1/3] Validating email...', type: 'process' },
     { text: '✓ Email verified', type: 'success' },
-    { text: '[2/4] Enabling weekly updates...', type: 'process' },
-    { text: '✓ Weekly updates enabled', type: 'success' },
-    { text: '[3/4] Finalizing subscription...', type: 'process' },
-    { text: '✓ Successfully subscribed!', type: 'success' },
-    { text: '✓ Welcome to AlgoBuddy Blogs 🚀', type: 'success' },
+    { text: '[2/3] Enabling weekly updates...', type: 'process' },
+    { text: '✓ Updates enabled', type: 'success' },
+    { text: '✓ Subscribed — Welcome 🚀', type: 'success' },
   ];
 
   useEffect(() => {
@@ -27,34 +24,92 @@ const TerminalPopup = ({ isOpen, onClose, email }) => {
     }
 
     let currentIndex = 0;
-    let typingTimeout;
-    let cursorInterval;
+    let charTimeout = null;
+    let lineTimeout = null;
+    let cursorInterval = null;
+    let autoCloseTimeout = null;
 
-    const displayNextLine = () => {
-      if (currentIndex < terminalSequence.length) {
-        const line = terminalSequence[currentIndex];
-        setLines(prev => [...prev, line]);
-        currentIndex++;
-        
-        // Vary delay based on line type for cinematic effect
-        const delay = line.type === 'break' ? 100 : line.type === 'process' ? 600 : 400;
-        typingTimeout = setTimeout(displayNextLine, delay);
-      } else {
-        setIsComplete(true);
-        setShowCursor(true);
-        cursorInterval = setInterval(() => {
-          setShowCursor(prev => !prev);
-        }, 500);
+    const startCursor = () => {
+      if (!cursorInterval) {
+        cursorInterval = setInterval(() => setShowCursor(prev => !prev), 500);
       }
     };
 
-    // Start with a small delay
-    const initialDelay = setTimeout(displayNextLine, 300);
+    const stopCursor = () => {
+      if (cursorInterval) {
+        clearInterval(cursorInterval);
+        cursorInterval = null;
+      }
+      setShowCursor(false);
+    };
+
+    const typeLine = (line) => {
+      // append an empty line object first
+      setLines(prev => [...prev, { text: '', type: line.type }]);
+      startCursor();
+
+      let charIndex = 0;
+      const charDelay = line.type === 'command' ? 25 : line.type === 'process' ? 20 : 20;
+
+      const doChar = () => {
+        if (charIndex < line.text.length) {
+          setLines(prev => {
+            const copy = [...prev];
+            const last = { ...(copy[copy.length - 1]) };
+            last.text = (last.text || '') + line.text.charAt(charIndex);
+            copy[copy.length - 1] = last;
+            return copy;
+          });
+          charIndex++;
+          charTimeout = setTimeout(doChar, charDelay);
+        } else {
+          // after finishing typing this line, small pause before next
+          const postDelay = line.type === 'process' ? 320 : 180;
+          lineTimeout = setTimeout(() => {
+            currentIndex++;
+            displayNext();
+          }, postDelay);
+        }
+      };
+
+      // start typing chars
+      doChar();
+    };
+
+    const displayNext = () => {
+      if (currentIndex >= terminalSequence.length) {
+        setIsComplete(true);
+        startCursor();
+        // auto-close shortly after complete
+        autoCloseTimeout = setTimeout(() => {
+          try { onClose(); } catch (e) {}
+        }, 2800);
+        return;
+      }
+
+      const line = terminalSequence[currentIndex];
+
+      if (!line || !line.text) {
+        // empty/break line
+        setLines(prev => [...prev, { text: '', type: 'break' }]);
+        currentIndex++;
+        lineTimeout = setTimeout(displayNext, 100);
+        return;
+      }
+
+      // For success lines we still type them but slightly faster
+      typeLine(line);
+    };
+
+    // kick off
+    const initialDelay = setTimeout(() => displayNext(), 150);
 
     return () => {
       clearTimeout(initialDelay);
-      clearTimeout(typingTimeout);
-      clearInterval(cursorInterval);
+      clearTimeout(charTimeout);
+      clearTimeout(lineTimeout);
+      if (cursorInterval) clearInterval(cursorInterval);
+      clearTimeout(autoCloseTimeout);
     };
   }, [isOpen]);
 
@@ -94,30 +149,29 @@ const TerminalPopup = ({ isOpen, onClose, email }) => {
           {/* Terminal Content */}
           <div className="bg-black p-6 font-mono text-sm min-h-64 max-h-96 overflow-auto">
             <div className="space-y-0.5 leading-relaxed">
-              {lines.map((line, idx) => (
-                <div 
-                  key={idx}
-                  className={`${
-                    line.type === 'command' 
-                      ? 'text-white' 
-                      : line.type === 'success' 
-                      ? 'text-green-400 terminal-text' 
-                      : line.type === 'process'
-                      ? 'text-yellow-400'
-                      : ''
-                  }`}
-                >
-                  {line.text}
-                </div>
-              ))}
-              {isComplete && (
-                <div className="text-green-400">
-                  ${' '}
-                  <span className={`${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-100`}>
-                    ▋
-                  </span>
-                </div>
-              )}
+              {lines.map((line, idx) => {
+                const isLast = idx === lines.length - 1;
+                const baseClass = line.type === 'command'
+                  ? 'text-white'
+                  : line.type === 'success'
+                  ? 'text-green-400 terminal-text'
+                  : line.type === 'process'
+                  ? 'text-yellow-400'
+                  : '';
+
+                const cursorColorClass = line.type === 'success' ? 'text-green-400' : line.type === 'process' ? 'text-yellow-400' : 'text-white';
+
+                return (
+                  <div key={idx} className={baseClass}>
+                    <span>{line.text}</span>
+                    {isLast && (
+                      <span className={`${showCursor ? 'opacity-100' : 'opacity-0'} transition-opacity duration-100 ml-1 ${cursorColorClass}`}>
+                        ▋
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 

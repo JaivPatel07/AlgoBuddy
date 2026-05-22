@@ -66,7 +66,17 @@ const BinarySearch = () => {
       return;
     }
 
-    const elements = arrayElements.split(",").map((el) => parseInt(el.trim()));
+    const rawElements = arrayElements.split(",").map((el) => el.trim());
+
+    // FIX: detect decimal/float inputs before parsing and warn the user
+    const hasDecimals = rawElements.some((el) => el.includes("."));
+    if (hasDecimals) {
+      setMessage("Only integers are supported. Please remove decimal values.");
+      setMessageType("warning");
+      return;
+    }
+
+    const elements = rawElements.map((el) => parseInt(el));
     const targetValue = parseInt(target);
 
     if (elements.some(isNaN) || isNaN(targetValue)) {

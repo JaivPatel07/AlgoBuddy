@@ -57,11 +57,11 @@ const SerializationContent = () => {
             {/* String Representation */}
             <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 font-mono text-orange-300 drop-shadow-xl text-center">
               <div className="text-xs text-slate-500 mb-2 uppercase tracking-widest font-sans">Pre-order String</div>
-              "1,2,N,N,3,4,N,N,5,N,N"
+              &quot;1,2,N,N,3,4,N,N,5,N,N&quot;
             </div>
           </div>
           <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-            Using Pre-order traversal, the tree is flattened. 'N' is used to explicitly mark null pointers to preserve the exact structure.
+            Using Pre-order traversal, the tree is flattened. &apos;N&apos; is used to explicitly mark null pointers to preserve the exact structure.
           </p>
         </section>
 
@@ -80,7 +80,7 @@ const SerializationContent = () => {
                   <div>
                     <p className="font-bold text-lg mb-1 text-[#1a1a1a] dark:text-white">1. Serialize (DFS Pre-order)</p>
                     <p className="text-sm text-[#6b7280] dark:text-[#9ca3af] leading-relaxed">
-                      Traverse the tree using Depth-First Search (DFS) in Pre-order (Root, Left, Right). Append the current node's value to a list. If a node is null, append a special marker like "N".
+                      Traverse the tree using Depth-First Search (DFS) in Pre-order (Root, Left, Right). Append the current node&apos;s value to a list. If a node is null, append a special marker like &quot;N&quot;.
                     </p>
                   </div>
                 </div>
@@ -94,7 +94,7 @@ const SerializationContent = () => {
                   <div>
                     <p className="font-bold text-lg mb-1 text-[#1a1a1a] dark:text-white">2. Format Output</p>
                     <p className="text-sm text-[#6b7280] dark:text-[#9ca3af] leading-relaxed">
-                      Join the list of strings using a delimiter like a comma ",". This creates a single continuous string representation of the tree.
+                      Join the list of strings using a delimiter like a comma &quot;,&quot;. This creates a single continuous string representation of the tree.
                     </p>
                   </div>
                 </div>
@@ -108,7 +108,7 @@ const SerializationContent = () => {
                   <div>
                     <p className="font-bold text-lg mb-1 text-[#1a1a1a] dark:text-white">3. Deserialize</p>
                     <p className="text-sm text-[#6b7280] dark:text-[#9ca3af] leading-relaxed">
-                      Split the string by commas into a queue or array. Use DFS again, reading values one by one in the exact same Pre-order sequence. If you encounter "N", return null. Otherwise, construct a new node, recursively attach its left and right children, and return it.
+                      Split the string by commas into a queue or array. Use DFS again, reading values one by one in the exact same Pre-order sequence. If you encounter &quot;N&quot;, return null. Otherwise, construct a new node, recursively attach its left and right children, and return it.
                     </p>
                   </div>
                 </div>

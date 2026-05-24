@@ -169,7 +169,7 @@ const IsomorphismContent = () => {
                 Key Takeaways
               </h2>
               <ul className="list-disc pl-5 space-y-2 text-sm text-green-800 dark:text-green-200/80 leading-relaxed">
-                <li>Isomorphism is a classic example of "try both possibilities" recursion. We branch into two possibilities at every step: swapped and unswapped.</li>
+                <li>Isomorphism is a classic example of &quot;try both possibilities&quot; recursion. We branch into two possibilities at every step: swapped and unswapped.</li>
                 <li>Because of short-circuit evaluation (`||` and `&&`), the recursion often stops early if structural mismatches are found.</li>
               </ul>
             </div>

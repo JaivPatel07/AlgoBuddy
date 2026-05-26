@@ -368,6 +368,7 @@ AlgoBuddy/
 │   ├── 📂 api/                      # API routes
 │   │   ├── auth/                    #   ├── Authentication endpoints
 │   │   ├── contact/                 #   ├── Contact form handler
+│   │   ├── chatbot/                 #   ├── AI chatbot endpoint
 │   │   └── send-review/             #   └── Review submission
 │   │
 │   ├── 📂 blogs/                    # Blog pages & content
@@ -380,11 +381,13 @@ AlgoBuddy/
 │   │   ├── models/                  #   ├── Data structure models
 │   │   └── ui/                      #   └── Reusable UI primitives
 │   │
-│   ├── layout.js                    # Root layout
-│   └── page.js                      # Landing page
+│   ├── layout.jsx                   # Root layout
+│   └── page.jsx                     # Landing page
 │
 ├── 📂 lib/                          # Utility libraries
-│   └── supabase/                    # Supabase client config
+│   ├── supabase.js                  #   ├── Supabase client config
+│   ├── activity.js                  #   ├── Activity tracking logic
+│   └── gtag.js                      #   └── Google Analytics helper
 │
 ├── 📂 utils/                        # Helper functions
 ├── 📂 public/                       # Static assets

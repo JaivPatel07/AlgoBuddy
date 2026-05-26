@@ -52,6 +52,15 @@ const securityHeaders = [
 ];
 
 const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com",
+        pathname: "/8.x/initials/**",
+      },
+    ],
+  },
 	async redirects() {
 		return [
 			{

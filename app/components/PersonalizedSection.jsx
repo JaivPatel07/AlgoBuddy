@@ -95,7 +95,7 @@ export default function PersonalizedSection() {
           >
             Start your path
             <svg
-              className="w-4 h-4"
+              className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-200"
               fill="none"
               stroke="currentColor"
               strokeWidth={2.5}

@@ -66,6 +66,16 @@ const DS_THEME = {
       </svg>
     ),
   },
+  HashMap: {
+    color: "#db2777",
+    bg: "#fdf2f8",
+    border: "#fbcfe8",
+    icon: (c) => (
+      <svg viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-full h-full">
+        <path d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+      </svg>
+    ),
+  },
 };
 
 const getTheme = (t) =>
@@ -207,6 +217,40 @@ function GraphMiniViz({ color }) {
   );
 }
 
+function HashMapMiniViz({ color }) {
+  const buckets = [
+    { key: "k1", val: "v1" },
+    { key: null, val: null },
+    { key: "k2", val: "v2" },
+    { key: "k3", val: "v3" }
+  ];
+  return (
+    <div className="flex gap-2 items-center justify-center h-[48px]">
+      {buckets.map((b, i) => (
+        <div
+          key={i}
+          className="flex flex-col items-center justify-center border rounded p-1 w-14 h-10 transition-all duration-300"
+          style={{
+            background: b.key ? color + "15" : "transparent",
+            borderColor: b.key ? color + "50" : color + "20",
+          }}
+        >
+          <span className="text-[8px] font-mono" style={{ color: b.key ? color : color + "50" }}>
+            [{i}]
+          </span>
+          {b.key ? (
+            <span className="text-[9px] font-bold" style={{ color }}>
+              {b.key}:{b.val}
+            </span>
+          ) : (
+            <span className="text-[9px] font-bold text-gray-300 dark:text-gray-600">∅</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const MINI_VIZ = {
   Array: ArrayMiniViz,
   Stack: StackMiniViz,
@@ -214,6 +258,7 @@ const MINI_VIZ = {
   "Linked List": LinkedListMiniViz,
   Tree: TreeMiniViz,
   Graph: GraphMiniViz,
+  HashMap: HashMapMiniViz,
 };
 
 /* ═══════════════════════════════════════
@@ -481,13 +526,13 @@ export default function VisualizerClient({ initialSections }) {
   const handleCardClick = (section) => {
     // Save grid scroll position before entering the module view
     sessionStorage.setItem("visualizerGridScrollPosition", window.scrollY.toString());
-
+    
     // Update URL to include category search query in browser history
     window.history.pushState(null, "", `?category=${encodeURIComponent(section.title.toLowerCase())}`);
-
+    
     // Reset module scroll position to top
     sessionStorage.setItem("visualizerModuleScrollPosition", "0");
-
+    
     setActiveSection(section);
     window.scrollTo(0, 0);
   };
@@ -495,20 +540,20 @@ export default function VisualizerClient({ initialSections }) {
   const handleBackToGrid = () => {
     // Revert URL to base visualizer path
     window.history.pushState(null, "", "/visualizer");
-
+    
     setActiveSection(null);
 
-    // Restore grid scroll position
+    // Restore grid scroll position after transition stabilizes
     const savedGridPos = sessionStorage.getItem("visualizerGridScrollPosition");
     if (savedGridPos) {
       const scrollPos = parseInt(savedGridPos, 10);
-      if (!isNaN(scrollPos) && scrollPos > 0) {
+      if (!isNaN(scrollPos)) {
         setTimeout(() => {
           window.scrollTo({
             top: scrollPos,
             behavior: "instant",
           });
-        }, 50);
+        }, 100);
       }
     }
   };
@@ -563,6 +608,7 @@ export default function VisualizerClient({ initialSections }) {
         .dark [data-theme-card="Linked List"] { background: #2b1a08 !important; border-color: #92400e !important; }
         .dark [data-theme-card="Tree"] { background: #1a0e2d !important; border-color: #5b21b6 !important; }
         .dark [data-theme-card="Graph"] { background: #2c1215 !important; border-color: #991b1b !important; }
+        .dark [data-theme-card="HashMap"] { background: #2e1022 !important; border-color: #9d174d !important; }
 
         /* Dark mode solid card headers & icons */
         .dark [data-theme-header="Custom Code"] { background: #3e4143 !important; border-color: #4b5563 !important; }
@@ -572,6 +618,7 @@ export default function VisualizerClient({ initialSections }) {
         .dark [data-theme-header="Linked List"] { background: #3d240a !important; border-color: #92400e !important; }
         .dark [data-theme-header="Tree"] { background: #23133d !important; border-color: #5b21b6 !important; }
         .dark [data-theme-header="Graph"] { background: #3d171b !important; border-color: #991b1b !important; }
+        .dark [data-theme-header="HashMap"] { background: #3b132b !important; border-color: #9d174d !important; }
 
         /* Mini Viz Overrides for Dark Mode (Rich saturated colors) */
         .dark [data-theme-card="Array"] .mini-viz-inactive { background: #5b21b6 !important; }

@@ -109,6 +109,7 @@ test("getPublicCollaborationSession returns only discoverable fields", async () 
     "createdAt",
     "updatedAt",
     "participantCount",
+    "presenterId",
   ]);
 
   const returned = Object.keys(pub);

@@ -9,6 +9,7 @@ import TreeModal from "@/app/components/models/TreeModal";
 import GraphModal from "@/app/components/models/GraphModal";
 import TutorialOverlay from "@/app/components/ui/TutorialOverlay";
 import BackToTop from "../components/ui/backtotop";
+import RecentlyViewed from "@/app/components/ui/RecentlyViewed";
 
 export const metadata = {
   title: "Algorithm Visualizer | AlgoBuddy",
@@ -151,6 +152,12 @@ const sections = [
           { name: "Merge Sort", path: "/visualizer/sorting/mergesort" },
           { name: "Quick Sort", path: "/visualizer/sorting/quicksort" },
           { name: "Counting Sort", path: "/visualizer/sorting/countingsort" },
+        ],
+      },
+      {
+        title: "Interview Patterns",
+        items: [
+          { name: "Sliding Window", path: "/visualizer/arrays/slidingwindow" },
         ],
       },
     ],

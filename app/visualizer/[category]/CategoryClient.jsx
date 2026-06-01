@@ -152,13 +152,7 @@ export default function CategoryClient({ section }) {
       >
         {/* Header Card */}
         <div className="mb-8 transition-colors duration-300">
-          <div className="mb-4">
-            <Breadcrumbs paths={[
-              { name: "Home", href: "/" },
-              { name: "Visualizer", href: "/visualizer" },
-              { name: section.title }
-            ]} />
-          </div>
+
 
           <div className="flex items-center gap-5">
             {theme.icon && (

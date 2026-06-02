@@ -70,7 +70,7 @@ const InsertionSortVisualizer = () => {
     setSorting(false);
     setSorted(false);
     setComparisons(0);
-    setSwaps(0);
+    setShifts(0);
     setCurrentStep(0);
     setTotalSteps(0);
     setCurrentIndices({ i: -1, j: -1, key: -1 });

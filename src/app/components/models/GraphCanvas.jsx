@@ -1,4 +1,4 @@
-﻿// app/components/models/GraphCanvas.jsx
+// src/app/components/models/GraphCanvas.jsx
 "use client";
 import { useRef, useState, useCallback } from "react";
 
@@ -119,35 +119,29 @@ export default function GraphCanvas({
     },
     [edgeStart, interactive, onAddEdge]
   );
+
   const handleNodeMouseDown = useCallback(
-  (e, id) => {
-    if (!interactive || !onMoveNode) return;
+    (e, id) => {
+      if (!interactive || !onMoveNode) return;
+      e.stopPropagation();
+      setDraggingNode(id);
+    },
+    [interactive, onMoveNode]
+  );
 
-    e.stopPropagation();
+  const handleMouseMove = useCallback(
+    (e) => {
+      if (!draggingNode || !onMoveNode || !svgRef.current) return;
+      const rect = svgRef.current.getBoundingClientRect();
+      onMoveNode(draggingNode, e.clientX - rect.left, e.clientY - rect.top);
+    },
+    [draggingNode, onMoveNode]
+  );
 
-    setDraggingNode(id);
-  },
-  [interactive, onMoveNode]
-);
+  const handleMouseUp = useCallback(() => {
+    setDraggingNode(null);
+  }, []);
 
-const handleMouseMove = useCallback(
-  (e) => {
-    if (!draggingNode || !onMoveNode || !svgRef.current) return;
-
-    const rect = svgRef.current.getBoundingClientRect();
-
-    onMoveNode(
-      draggingNode,
-      e.clientX - rect.left,
-      e.clientY - rect.top
-    );
-  },
-  [draggingNode, onMoveNode]
-);
-
-const handleMouseUp = useCallback(() => {
-  setDraggingNode(null);
-}, []);
   const handleNodeRightClick = useCallback(
     (e, id) => {
       if (!interactive || !onRemoveNode) return;
@@ -200,8 +194,8 @@ const handleMouseUp = useCallback(() => {
       style={{ cursor: interactive && edgeStart !== null ? "crosshair" : "default", minHeight: 420 }}
       onClick={handleCanvasClick}
       onMouseMove={handleMouseMove}
-onMouseUp={handleMouseUp}
-onMouseLeave={handleMouseUp}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseUp}
     >
       <defs>
         <marker
@@ -260,9 +254,6 @@ onMouseLeave={handleMouseUp}
         const { x: ex, y: ey } = edge.directed
           ? edgeEndpoint(src.x, src.y, tgt.x, tgt.y, NODE_RADIUS)
           : { x: tgt.x, y: tgt.y };
-
-        const labelX = (src.x + tgt.x) / 2;
-        const labelY = (src.y + tgt.y) / 2;
 
         return (
           <g key={idx}>

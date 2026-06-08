@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -147,7 +147,7 @@ export default function PracticePage() {
   const [theme, setTheme] = useState("light");
   const [themeMounted, setThemeMounted] = useState(false);
 
-  const carouselRef = useRef(null);
+
 
   useEffect(() => {
     if (!user) {
@@ -318,13 +318,6 @@ export default function PracticePage() {
       localStorage.setItem("algobuddy_practice_progress", JSON.stringify(updated));
     } catch (e) {
       console.error("Failed to update status:", e);
-    }
-  };
-
-  const handleScrollCarousel = (direction) => {
-    if (carouselRef.current) {
-      const offset = direction === "left" ? -240 : 240;
-      carouselRef.current.scrollBy({ left: offset, behavior: "smooth" });
     }
   };
 

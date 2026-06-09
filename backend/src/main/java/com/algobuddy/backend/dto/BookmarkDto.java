@@ -4,7 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 
 @Data
 @Builder
@@ -13,5 +13,5 @@ import java.time.LocalDateTime;
 public class BookmarkDto {
     private String problemId;
     private String topicSlug;
-    private LocalDateTime createdAt;
+    private OffsetDateTime createdAt;
 }

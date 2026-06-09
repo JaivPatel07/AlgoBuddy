@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -35,10 +36,10 @@ public class PracticeService {
         UserPracticeStats stats = statsRepository.findById(userId)
                 .orElse(new UserPracticeStats(userId, 0, 0, null, 0));
 
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
-        LocalDateTime startOfWeek = now.toLocalDate().with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)).atStartOfDay();
-        LocalDateTime startOfMonth = now.toLocalDate().withDayOfMonth(1).atStartOfDay();
+        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime startOfDay = now.toLocalDate().atStartOfDay(now.getOffset()).toOffsetDateTime();
+        OffsetDateTime startOfWeek = now.toLocalDate().with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY)).atStartOfDay(now.getOffset()).toOffsetDateTime();
+        OffsetDateTime startOfMonth = now.toLocalDate().withDayOfMonth(1).atStartOfDay(now.getOffset()).toOffsetDateTime();
 
         int dailySolved = 0;
         int weeklySolved = 0;
@@ -77,14 +78,14 @@ public class PracticeService {
         if (existingProgress.isPresent()) {
             UserProgress progress = existingProgress.get();
             progress.setStatus(request.getStatus());
-            progress.setUpdatedAt(LocalDateTime.now());
+            progress.setUpdatedAt(OffsetDateTime.now());
             progressRepository.save(progress);
         } else {
             UserProgress newProgress = new UserProgress();
             newProgress.setUserId(userId);
             newProgress.setProblemId(request.getProblemId());
             newProgress.setStatus(request.getStatus());
-            newProgress.setUpdatedAt(LocalDateTime.now());
+            newProgress.setUpdatedAt(OffsetDateTime.now());
             progressRepository.save(newProgress);
         }
 

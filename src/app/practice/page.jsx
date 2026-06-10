@@ -19,7 +19,11 @@ import {
   BookOpen,
   Play,
   ExternalLink,
-  ScrollText
+  ScrollText,
+  Home,
+  Trophy,
+  Zap,
+  User
 } from "lucide-react";
 
 import PracticeSidebar from "@/app/components/practice/PracticeSidebar";

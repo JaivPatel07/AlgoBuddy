@@ -2,7 +2,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useUser } from "@/features/user/UserContext";
 import { supabase } from "@/lib/supabase";
 import { Moon, Sun, Menu, X, ChevronDown, Swords, LogOut } from "lucide-react";
@@ -46,7 +46,7 @@ export default function Navbar() {
   const [themeMounted, setThemeMounted] = useState(false);
 
   const pathname = usePathname();
-  const router = useRouter();
+ 
   const { user, setUser } = useUser();
   const userRef = useRef(null);
 
@@ -132,6 +132,7 @@ export default function Navbar() {
     await supabase.auth.signOut();
     setUser(null);
     router.push("/");
+    //  window.location.href = "/";
     setMenuOpen(false);
   };
 
@@ -145,6 +146,8 @@ export default function Navbar() {
     return (
       pathname === href ||
       pathname.startsWith(href + "/")
+
+
     );
   };
 

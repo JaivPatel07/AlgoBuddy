@@ -6,7 +6,7 @@ import GoButton from "@/app/components/ui/goButton";
 import PlaybackControls from "@/app/components/ui/PlaybackControls";
 import useVisualizerKeyboard from "@/app/hooks/useVisualizerKeyboard";
 import { useAnimationEngine } from "@/lib/visualizer/useAnimationEngine";
-import html2canvas from "html2canvas";
+
 import { 
   generateStatesFixedMax, 
   generateStatesFixedAvg, 
@@ -115,12 +115,12 @@ const Animation = () => {
       }
     });
 
-    if (state.done) {
+    if (state.done && engine.isPlaying) {
       setMessage("Visualization completed.");
       setMessageType("success");
       setShowQuiz(true);
     }
-  }, []);
+  }, [visualState, engine.isPlaying]);
 
   useEffect(() => {
     if (steps.length > 0) {

@@ -23,7 +23,7 @@ import PracticeSessionBanner from "@/app/components/practice/PracticeSessionBann
 import CompanyLogos from "@/app/components/practice/CompanyLogos";
 import TheoryDrawer from "@/app/components/practice/TheoryDrawer";
 import BackToTop from "@/app/components/ui/backtotop";
-import Footer from "@/app/components/Footer";
+import Footer from "@/app/components/footer";
 
 import { practiceData } from "@/lib/practiceData";
 import { useUser } from "@/features/user/UserContext";

@@ -77,6 +77,7 @@ body {
   font-family: var(--font-source-sans-3), 'Source Sans 3', 'Source Sans Pro', ui-sans-serif, system-ui, sans-serif;
   color: var(--udemy-text);
   background: var(--udemy-bg);
+  transition: background-color var(--motion-normal) var(--ease-standard), color var(--motion-normal) var(--ease-standard);
 }
 
 .landing-page h1, .landing-page h2, .landing-page h3, .landing-page h4 {

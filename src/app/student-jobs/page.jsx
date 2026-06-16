@@ -4,8 +4,9 @@ import { useState, useEffect } from "react";
 import { toast } from "react-hot-toast";
 import {
   Briefcase, MapPin, Calendar, ChevronLeft, ChevronRight,
-  Send, CheckCircle, X
+  Send, CheckCircle, X, Bookmark, BookmarkCheck
 } from "lucide-react";
+import Link from "next/link";
 
 export default function StudentJobsPage() {
   const [jobs, setJobs] = useState([]);
@@ -14,7 +15,9 @@ export default function StudentJobsPage() {
   const [totalJobs, setTotalJobs] = useState(0);
   const [loading, setLoading] = useState(true);
   const [appliedIds, setAppliedIds] = useState(new Set());
+  const [bookmarkedIds, setBookmarkedIds] = useState(new Set());
   const [applying, setApplying] = useState(null);
+  const [bookmarking, setBookmarking] = useState(null);
   const [confirmJob, setConfirmJob] = useState(null);
 
   async function fetchJobs(page) {
@@ -37,17 +40,59 @@ export default function StudentJobsPage() {
     try {
       const res = await fetch("/api/applications?limit=200");
       const data = await res.json();
-      const ids = new Set((data.applications || []).map((a) => a.job_id));
-      setAppliedIds(ids);
+      setAppliedIds(new Set((data.applications || []).map((a) => a.job_id)));
     } catch (err) {
       console.error("Failed to fetch applications:", err);
+    }
+  }
+
+  async function fetchBookmarks() {
+    try {
+      const res = await fetch("/api/bookmarks?limit=200");
+      const data = await res.json();
+      setBookmarkedIds(new Set(data.bookmarkedIds || []));
+    } catch (err) {
+      console.error("Failed to fetch bookmarks:", err);
     }
   }
 
   useEffect(() => {
     fetchJobs(currentPage);
     fetchApplications();
+    fetchBookmarks();
   }, [currentPage]);
+
+  async function handleToggleBookmark(jobId) {
+    setBookmarking(jobId);
+    try {
+      const res = await fetch("/api/bookmarks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobId }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast.error(data.error || "Failed to update bookmark");
+        return;
+      }
+      setBookmarkedIds((prev) => {
+        const next = new Set(prev);
+        if (data.bookmarked) {
+          next.add(jobId);
+          toast.success("Job bookmarked!");
+        } else {
+          next.delete(jobId);
+          toast.success("Bookmark removed");
+        }
+        return next;
+      });
+    } catch (err) {
+      toast.error("Something went wrong");
+      console.error("Bookmark error:", err);
+    } finally {
+      setBookmarking(null);
+    }
+  }
 
   async function handleApply(jobId) {
     setApplying(jobId);
@@ -81,6 +126,10 @@ export default function StudentJobsPage() {
     if (currentPage < totalPages) setCurrentPage((p) => p + 1);
   }
 
+  function handlePageClick(page) {
+    setCurrentPage(page);
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-4xl mx-auto">
@@ -93,6 +142,13 @@ export default function StudentJobsPage() {
                 : "No job listings available"}
             </p>
           </div>
+          <Link
+            href="/saved-jobs"
+            className="inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg transition-colors"
+          >
+            <BookmarkCheck className="h-4 w-4" />
+            Saved Jobs
+          </Link>
         </div>
 
         {loading ? (
@@ -116,11 +172,27 @@ export default function StudentJobsPage() {
             <div className="space-y-4">
               {jobs.map((job) => {
                 const alreadyApplied = appliedIds.has(job.id);
+                const bookmarked = bookmarkedIds.has(job.id);
+                const isBookmarking = bookmarking === job.id;
                 return (
                   <div key={job.id} className="bg-white rounded-xl shadow-sm p-6 hover:shadow-md transition-shadow">
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0">
-                        <h2 className="text-xl font-semibold text-gray-900">{job.title}</h2>
+                        <div className="flex items-center gap-2">
+                          <h2 className="text-xl font-semibold text-gray-900">{job.title}</h2>
+                          <button
+                            onClick={() => handleToggleBookmark(job.id)}
+                            disabled={isBookmarking}
+                            className="p-1 text-gray-400 hover:text-indigo-600 disabled:opacity-50 transition-colors"
+                            aria-label={bookmarked ? "Remove bookmark" : "Add bookmark"}
+                          >
+                            {bookmarked ? (
+                              <BookmarkCheck className="h-5 w-5 text-indigo-600 fill-indigo-600" />
+                            ) : (
+                              <Bookmark className="h-5 w-5" />
+                            )}
+                          </button>
+                        </div>
                         <p className="text-indigo-600 font-medium mt-1">{job.company}</p>
                         <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-500">
                           {job.location && (
@@ -195,7 +267,7 @@ export default function StudentJobsPage() {
                     return (
                       <button
                         key={pageNum}
-                        onClick={() => setCurrentPage(pageNum)}
+                        onClick={() => handlePageClick(pageNum)}
                         className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                           currentPage === pageNum
                             ? "bg-indigo-600 text-white"

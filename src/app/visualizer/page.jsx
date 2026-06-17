@@ -14,6 +14,7 @@ import KeyboardShortcuts from "@/app/components/KeyboardShortcuts";
 import AlgorithmNotes from "@/app/components/AlgorithmNotes";
 import GamifiedLeaderboard from "@/app/components/GamifiedLeaderboard";
 import LearningChallenges from "@/app/components/LearningChallenges";
+import InterviewPreparation from "@/app/components/InterviewPreparation";
 
 export const metadata = {
   title: "Algorithm Visualizer | AlgoBuddy",
@@ -792,6 +793,8 @@ const Visualizer = () => {
       <GamifiedLeaderboard />
 
       <LearningChallenges />
+
+      <InterviewPreparation />
 
       <AlgorithmNotes />
 

@@ -67,6 +67,14 @@ export default function SavedJobsPage() {
     }
   }
 
+  function handlePrev() {
+    if (currentPage > 1) setCurrentPage((p) => p - 1);
+  }
+
+  function handleNext() {
+    if (currentPage < totalPages) setCurrentPage((p) => p + 1);
+  }
+
   useEffect(() => {
     fetchBookmarks(currentPage);
   }, [currentPage]);
@@ -131,8 +139,11 @@ export default function SavedJobsPage() {
                       {job.location && <span>{job.location}</span>}
                       {job.job_type && <span className="capitalize">{job.job_type.replace("-", " ")}</span>}
                       {job.experience_level && <span className="capitalize">{job.experience_level.replace("-", " ")}</span>}
-                      {job.salary_range && <span className="font-medium text-green-600">{job.salary_range}</span>}
+                      <span>{new Date(job.created_at).toLocaleDateString()}</span>
                     </div>
+                    {job.salary_range && (
+                      <p className="mt-2 text-sm font-medium text-green-600">{job.salary_range}</p>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3 flex-shrink-0">
@@ -158,9 +169,9 @@ export default function SavedJobsPage() {
             {totalPages > 1 && (
               <div className="flex items-center justify-center gap-2 mt-8">
                 <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  onClick={handlePrev}
                   disabled={currentPage === 1}
-                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="h-4 w-4" />
                   Previous
@@ -171,9 +182,9 @@ export default function SavedJobsPage() {
                 </span>
 
                 <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  onClick={handleNext}
                   disabled={currentPage === totalPages}
-                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center gap-1 px-4 py-2 text-sm font-medium rounded-lg border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Next
                   <ChevronRight className="h-4 w-4" />

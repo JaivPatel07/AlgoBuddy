@@ -796,7 +796,7 @@ const sections = [
         items: [
           {
             name: "DSA Flashcards",
-            path: "/visualizer/revision-flashcards",
+            path: "/visualizer/revision-flashcards"
           },
         ],
       },

@@ -1,30 +1,31 @@
 import { supabase } from "@/lib/supabase";
 
-const getLocalISODate = () => {
-  const now = new Date();
-  const local = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
-  return local.toISOString().split("T")[0];
+const trackActivity = async (type = "site_visit") => {
+  try {
+    await fetch("/api/activity", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // Send the browser's local calendar date so the server records activity
+      // against the user's own day rather than the server's UTC date.
+      body: JSON.stringify({ type, localDate: getLocalISODate() }),
+    });
+  } catch (e) {
+    console.error("trackActivity failed:", e);
+  }
 };
 
-const trackActivity = async (userId, type = "site_visit") => {
-  const today = getLocalISODate();
-
-  const { error } = await supabase
-    .from("user_activity")
-    .upsert(
-      { user_id: userId, activity_date: today, type },
-      { onConflict: "user_id, activity_date", ignoreDuplicates: true }
-    );
-
-  if (error) {
-    console.error("trackActivity upsert failed:", error);
-  }
+const getLocalISODate = (date = new Date()) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 const computeStreak = (activities) => {
   if (!activities || activities.length === 0) return 0;
 
   const dates = activities
+    .filter(Boolean)
     .map((a) => {
       const d = new Date(a.activity_date || a.created_at);
       return d.toISOString().split("T")[0];

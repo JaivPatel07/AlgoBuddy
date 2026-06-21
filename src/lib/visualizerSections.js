@@ -51,6 +51,7 @@ export const sections = [
         title: "Interview Patterns",
         items: [
           { name: "Sliding Window", path: "/visualizer/array/slidingwindow" },
+          { name: "Two Pointers", path: "/visualizer/array/twopointers" },
         ],
       },
     ],
@@ -167,6 +168,7 @@ export const sections = [
           { name: "Reverse", path: "/visualizer/linkedlist/operations/reverse" },
           { name: "Merge", path: "/visualizer/linkedlist/operations/merge" },
           { name: "Comparison", path: "/visualizer/linkedlist/operations/comparison" },
+          { name: "Sorting", path: "/visualizer/linkedlist/operations/sorting" },
         ],
       },
     ],
@@ -286,15 +288,40 @@ export const sections = [
     ],
   },
   {
+    title: "Dynamic Programming",
+    slug: "dp",
+    desc: "Visualized matrices for the Knapsack Problem, Longest Common Subsequence, and Coin Change",
+    subsections: [
+      {
+        title: "Algorithms",
+        items: [
+          {
+            name: "0/1 Knapsack Problem",
+            path: "/visualizer/dp/knapsack",
+          },
+          {
+            name: "Longest Common Subsequence",
+            path: "/visualizer/dp/lcs",
+          },
+          {
+            name: "Coin Change",
+            path: "/visualizer/dp/coin-change",
+          },
+        ],
+      },
+    ],
+  },
+  {
     title: "AI Algorithms",
     slug: "ai",
-    desc: "Search algorithms used in Artificial Intelligence (Min Max, Alpha Beta Pruning, etc.)",
+    desc: "Search algorithms used in Artificial Intelligence, heuristic pathfinding, and game tree decision making",
     subsections: [
       {
         title: "Adversarial Search",
         items: [
           { name: "Min Max Algorithm", path: "/visualizer/ai/minmax" },
           { name: "Alpha Beta Pruning", path: "/visualizer/ai/alpha-beta-pruning" },
+          { name: "A* Search", path: "/visualizer/ai/astar" },
           { name: "Monte Carlo Tree Search (MCTS)", path: "/visualizer/ai/mcts" },
         ],
       },

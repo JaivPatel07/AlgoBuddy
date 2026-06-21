@@ -7,7 +7,7 @@
 
 [![Live Demo](https://img.shields.io/badge/🌐%20Live%20Demo-algobuddy.me-6366f1?style=for-the-badge&logoColor=white)](https://algobuddy.me)
 [![License: MIT](https://img.shields.io/badge/License-MIT-22c55e?style=for-the-badge)](LICENSE)
-[![Next.js](https://img.shields.io/badge/Next.js%2014-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
+[![Next.js](https://img.shields.io/badge/Next.js%2016-black?style=for-the-badge&logo=next.js)](https://nextjs.org/)
 [![Stars](https://img.shields.io/github/stars/PankajSingh34/AlgoBuddy?style=for-the-badge&color=f59e0b)](https://github.com/PankajSingh34/AlgoBuddy/stargazers)
 [![Forks](https://img.shields.io/github/forks/PankajSingh34/AlgoBuddy?style=for-the-badge&color=6366f1)](https://github.com/PankajSingh34/AlgoBuddy/forks)
 [![PRs Welcome](https://img.shields.io/badge/PRs-Welcome-ec4899?style=for-the-badge)](CONTRIBUTING.md)
@@ -30,6 +30,39 @@
 <img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif" width="100%">
 
 </div>
+## 📚 Table of Contents
+
+- [🎯 Why AlgoBuddy?](#-why-algobuddy)
+- [✨ Features](#-features)
+  - [🔮 Algorithm Visualizer](#-algorithm-visualizer)
+- [👤 User System & Progress Tracking](#-user-system--progress-tracking)
+- [📝 Blog Platform](#-blog-platform)
+- [🎨 UX & Design](#-ux--design)
+- [📸 Screenshots](#-screenshots)
+  - [🏠 Home Page](#-home-page)
+  - [🔐 Authentication Page](#-authentication-page)
+  - [🧠 Visualizer Dashboard](#-visualizer-dashboard)
+  - [🔄 Queue Visualization](#-queue-visualization)
+  - [📚 Queue Operations](#-queue-operations)
+- [🛠 Tech Stack](#-tech-stack)
+- [🏗 Architecture](#-architecture)
+- [🚀 Quick Start](#-quick-start)
+  - [Prerequisites](#prerequisites)
+  - [1️⃣ Clone the Repository](#1️⃣-clone-the-repository)
+  - [2️⃣ Install Dependencies](#2️⃣-install-dependencies)
+  - [3️⃣ Configure Database Schema](#3️⃣-configure-database-schema)
+  - [4️⃣ Configure Environment Variables](#4️⃣-configure-environment-variables)
+  - [5️⃣ Start the Development Server](#5️⃣-start-the-development-server)
+  - [6️⃣ Other Commands](#6️⃣-other-commands)
+- [📁 Project Structure](#-project-structure)
+- [🤝 Contributing](#-contributing)
+  - [Contribution Areas](#contribution-areas)
+  - [Getting Started](#getting-started)
+  - [Issue Assignment Process](#issue-assignment-process)
+- [💬 Community](#-community)
+- [🌟 Star History](#-star-history)
+- [👥 Contributors](#-contributors)
+- [📜 License](#-license)
 
 <br/>
 
@@ -256,7 +289,7 @@ Animated, step-by-step visualizations for a wide range of DSA topics:
 
 | Layer | Technology | Purpose |
 |:---|:---|:---|
-| ⚡ **Framework** | ![Next.js](https://img.shields.io/badge/Next.js_14-000?logo=nextdotjs&logoColor=white) | App Router, SSR, API routes |
+| ⚡ **Framework** | ![Next.js](https://img.shields.io/badge/Next.js_16-000?logo=nextdotjs&logoColor=white) | App Router, SSR, API routes |
 | 🎨 **Styling** | ![Tailwind](https://img.shields.io/badge/Tailwind_CSS-06B6D4?logo=tailwindcss&logoColor=white) | Utility-first CSS framework |
 | 🗄 **Database** | ![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?logo=supabase&logoColor=white) | PostgreSQL + Auth + Realtime |
 | 🎬 **Animation** | ![GSAP](https://img.shields.io/badge/GSAP-88CE02?logo=greensock&logoColor=white) ![Framer](https://img.shields.io/badge/Framer_Motion-0055FF?logo=framer&logoColor=white) | Visualizer animations |
@@ -277,7 +310,7 @@ Animated, step-by-step visualizations for a wide range of DSA topics:
 
 ```mermaid
 graph TB
-    subgraph Client["🖥 Client — Next.js 14 App Router"]
+    subgraph Client["🖥 Client — Next.js 16 App Router"]
         UI["UI Components<br/>(React + Tailwind)"]
         VIS["Visualizer Engine<br/>(GSAP + Framer Motion)"]
         CHARTS["Complexity Graphs<br/>(Recharts)"]
@@ -420,9 +453,13 @@ GEMINI_API_KEY=your-gemini-api-key
 # ──────────── Rate Limiting (Production) ────────────
 UPSTASH_REDIS_REST_URL=your-upstash-url
 UPSTASH_REDIS_REST_TOKEN=your-upstash-token
+
+# ──────────── Spring Boot Backend CORS (Optional in dev, required in prod) ────────────
+ALLOWED_ORIGINS=http://localhost:3000
+APP_ENV=dev
 ```
 
-> **💡 Tip:** See [`EnvExample.txt`](EnvExample.txt) for a complete reference of all environment variables.
+> **💡 Tip:** See [`.env.example`](.env.example) for a complete reference of all environment variables.
 
 ### 5️⃣ Start the Development Server
 

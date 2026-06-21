@@ -31,7 +31,6 @@ function getValidKey(value) {
 const supabaseUrl = getValidUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
 const supabaseAnonKey = getValidKey(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 const supabaseServiceKey = getValidKey(process.env.SUPABASE_SERVICE_KEY);
-const turnstileConfigured = process.env.TURNSTILE_CONFIGURED === "true";
 
 const supabaseAdmin =
   supabaseUrl && supabaseServiceKey
@@ -44,14 +43,97 @@ const LOGIN_FAILURE_WINDOW_SECONDS = 15 * 60; // 15 minutes
 const LOGIN_FAILURE_THRESHOLD = 5; // lock after 5 failed attempts
 const LOGIN_LOCK_SECONDS = 15 * 60; // 15 minutes lockout
 
+const MAX_MEMORY_LOCKOUTS = 5000;
+const MAX_MEMORY_FAILURES = 5000;
+
 // In-memory fallback for local dev (single instance). Not suitable for serverless scaling.
 const memoryLockouts = new Map(); // email -> until timestamp
 const memoryFailures = new Map(); // email -> { count, resetAt }
+const memoryLocks = new Map(); // email -> boolean (per-email mutex)
+
+async function acquireMemoryLock(key, timeoutMs = 2000) {
+  const start = Date.now();
+  while (memoryLocks.get(key) === true) {
+    if (Date.now() - start > timeoutMs) return false;
+    await new Promise(r => setTimeout(r, 5));
+  }
+  memoryLocks.set(key, true);
+  return true;
+}
+
+function releaseMemoryLock(key) {
+  memoryLocks.delete(key);
+}
+
+// Periodic sweeper to clean up expired entries (replaces probabilistic GC)
+const MEMORY_SWEEP_INTERVAL_MS = 60_000;
+let memorySweepTimer = null;
+
+function startMemorySweeper() {
+  if (memorySweepTimer) return;
+  memorySweepTimer = setInterval(() => {
+    const now = Date.now();
+    for (const [k, until] of memoryLockouts.entries()) {
+      if (until <= now) memoryLockouts.delete(k);
+    }
+    for (const [k, bucket] of memoryFailures.entries()) {
+      if (bucket.resetAt <= now) memoryFailures.delete(k);
+    }
+    // memoryLockouts is exempt from size-based eviction to prevent brute-force
+    // bypass (an attacker flooding dummy emails should not flush a target's lockout).
+    // OOM risk is low since lockouts require 5 consecutive failures before creation.
+    // memoryFailures gets size limits to bound the higher-volume failure tracking.
+    if (memoryFailures.size > MAX_MEMORY_FAILURES) {
+      const toEvict = memoryFailures.size - MAX_MEMORY_FAILURES;
+      const iter = memoryFailures.keys();
+      for (let i = 0; i < toEvict; i++) {
+        const k = iter.next().value;
+        if (k !== undefined) memoryFailures.delete(k);
+      }
+      console.warn(`[auth] Evicted ${toEvict} failure entries: exceeded ${MAX_MEMORY_FAILURES} limit`);
+    }
+    const totalMemoryEntries = memoryLockouts.size + memoryFailures.size + memoryLocks.size;
+    if (totalMemoryEntries > 0) {
+      console.log(`[auth] Memory state: lockouts=${memoryLockouts.size}, failures=${memoryFailures.size}, locks=${memoryLocks.size}`);
+    }
+  }, MEMORY_SWEEP_INTERVAL_MS);
+  if (memorySweepTimer.unref) memorySweepTimer.unref();
+}
+
+startMemorySweeper();
 
 const redis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
     ? Redis.fromEnv()
     : null;
+
+let isRedisOffline = false;
+let redisOfflineUntil = 0;
+const COOLDOWN_MS = 10000;
+
+function markRedisOffline(err) {
+  if (!isRedisOffline) {
+    isRedisOffline = true;
+    console.error(`[auth] Redis connection failed, activating in-memory fallback. Error: ${err.message || err}`);
+  }
+  redisOfflineUntil = Date.now() + COOLDOWN_MS;
+}
+
+function markRedisOnline() {
+  if (isRedisOffline) {
+    isRedisOffline = false;
+    console.log("[auth] Redis connection restored, resuming Redis-based auth lockout.");
+  }
+}
+
+function shouldTryRedis() {
+  if (!redis) return false;
+  if (!isRedisOffline) return true;
+  if (Date.now() >= redisOfflineUntil) {
+    return true;
+  }
+  return false;
+}
 
 function normalizeEmail(email) {
   return String(email || "").trim().toLowerCase();
@@ -68,74 +150,101 @@ function failKey(email) {
 async function isEmailLocked(email) {
   if (!email) return false;
 
-  if (redis) {
-    const value = await redis.get(lockKey(email));
-    return Boolean(value);
+  if (shouldTryRedis()) {
+    try {
+      const value = await redis.get(lockKey(email));
+      markRedisOnline();
+      return Boolean(value);
+    } catch (err) {
+      markRedisOffline(err);
+    }
   }
 
-  const until = memoryLockouts.get(email);
-  if (!until) return false;
-  if (until <= Date.now()) {
-    memoryLockouts.delete(email);
-    return false;
+  const lockKeyMem = `auth:lock:${email}`;
+  const acquired = await acquireMemoryLock(lockKeyMem);
+  if (!acquired) return false;
+  try {
+    const until = memoryLockouts.get(email);
+    if (!until) return false;
+    if (until <= Date.now()) {
+      memoryLockouts.delete(email);
+      return false;
+    }
+    return true;
+  } finally {
+    releaseMemoryLock(lockKeyMem);
   }
-  return true;
 }
 
 async function recordLoginFailure(email) {
   if (!email) return { locked: false, remaining: LOGIN_FAILURE_THRESHOLD };
 
-  if (redis) {
-    const attempts = await redis.incr(failKey(email));
-    // Ensure the failure counter expires.
-    if (attempts === 1) {
-      await redis.expire(failKey(email), LOGIN_FAILURE_WINDOW_SECONDS);
+  if (shouldTryRedis()) {
+    try {
+      const attempts = await redis.incr(failKey(email));
+      if (attempts === 1) {
+        await redis.expire(failKey(email), LOGIN_FAILURE_WINDOW_SECONDS);
+      }
+      const remaining = Math.max(0, LOGIN_FAILURE_THRESHOLD - attempts);
+      if (attempts >= LOGIN_FAILURE_THRESHOLD) {
+        await redis.set(lockKey(email), "1", { ex: LOGIN_LOCK_SECONDS });
+        await redis.del(failKey(email));
+        markRedisOnline();
+        return { locked: true, remaining: 0 };
+      }
+      markRedisOnline();
+      return { locked: false, remaining };
+    } catch (err) {
+      markRedisOffline(err);
     }
-    const remaining = Math.max(0, LOGIN_FAILURE_THRESHOLD - attempts);
-    if (attempts >= LOGIN_FAILURE_THRESHOLD) {
-      await redis.set(lockKey(email), "1", { ex: LOGIN_LOCK_SECONDS });
-      await redis.del(failKey(email));
+  }
+
+  const lockKeyMem = `auth:fail:${email}`;
+  const acquired = await acquireMemoryLock(lockKeyMem);
+  if (!acquired) return { locked: false, remaining: LOGIN_FAILURE_THRESHOLD };
+
+  try {
+    const now = Date.now();
+    const bucket = memoryFailures.get(email);
+    if (!bucket || bucket.resetAt <= now) {
+      memoryFailures.set(email, { count: 1, resetAt: now + LOGIN_FAILURE_WINDOW_SECONDS * 1000 });
+      return { locked: false, remaining: LOGIN_FAILURE_THRESHOLD - 1 };
+    }
+    bucket.count += 1;
+    const remaining = Math.max(0, LOGIN_FAILURE_THRESHOLD - bucket.count);
+    if (bucket.count >= LOGIN_FAILURE_THRESHOLD) {
+      memoryFailures.delete(email);
+      memoryLockouts.set(email, now + LOGIN_LOCK_SECONDS * 1000);
       return { locked: true, remaining: 0 };
     }
     return { locked: false, remaining };
+  } finally {
+    releaseMemoryLock(lockKeyMem);
   }
-
-  const now = Date.now();
-  
-  // --- Memory Leak Fix: Probabilistic Garbage Collection ---
-  if (Math.random() < 0.05) {
-    for (const [k, until] of memoryLockouts.entries()) {
-      if (until <= now) memoryLockouts.delete(k);
-    }
-    for (const [k, bucket] of memoryFailures.entries()) {
-      if (bucket.resetAt <= now) memoryFailures.delete(k);
-    }
-  }
-
-  const bucket = memoryFailures.get(email);
-  if (!bucket || bucket.resetAt <= now) {
-    memoryFailures.set(email, { count: 1, resetAt: now + LOGIN_FAILURE_WINDOW_SECONDS * 1000 });
-    return { locked: false, remaining: LOGIN_FAILURE_THRESHOLD - 1 };
-  }
-  bucket.count += 1;
-  const remaining = Math.max(0, LOGIN_FAILURE_THRESHOLD - bucket.count);
-  if (bucket.count >= LOGIN_FAILURE_THRESHOLD) {
-    memoryFailures.delete(email);
-    memoryLockouts.set(email, now + LOGIN_LOCK_SECONDS * 1000);
-    return { locked: true, remaining: 0 };
-  }
-  return { locked: false, remaining };
 }
 
 async function clearLoginFailures(email) {
   if (!email) return;
-  if (redis) {
-    await redis.del(failKey(email));
-    await redis.del(lockKey(email));
-    return;
+  if (shouldTryRedis()) {
+    try {
+      await redis.del(failKey(email));
+      await redis.del(lockKey(email));
+      markRedisOnline();
+      return;
+    } catch (err) {
+      markRedisOffline(err);
+    }
   }
-  memoryFailures.delete(email);
-  memoryLockouts.delete(email);
+
+  const lockKeyMem = `auth:clear:${email}`;
+  const acquired = await acquireMemoryLock(lockKeyMem);
+  if (!acquired) return;
+  try {
+    memoryFailures.delete(email);
+    memoryLockouts.delete(email);
+  } finally {
+    releaseMemoryLock(lockKeyMem);
+  }
 }
 
 function genericAuthError() {
@@ -148,7 +257,7 @@ export async function POST(req) {
     const isProduction = process.env.NODE_ENV === "production";
     const hasRedis = process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN;
     if (isProduction && !hasRedis) {
-      return jsonResponse({ success: false, message: "Server misconfigured: Redis environment variables are not set." }, 500);
+      console.warn("Production environment is missing Redis variables; using in-memory rate limiters/lockouts.");
     }
 
     let body;
@@ -170,28 +279,31 @@ export async function POST(req) {
 
     const ip = getClientIp(req.headers);
 
-    const turnstileSecretKey = process.env.TURNSTILE_SECRET_KEY;
-    const isConfigured = turnstileConfigured && turnstileSecretKey && turnstileSecretKey !== "undefined";
-
+    const explicitBypass = process.env.TURNSTILE_BYPASS === "true";
     let captcha;
-    if (!isConfigured) {
-      const explicitBypass = process.env.TURNSTILE_BYPASS === "true";
 
-      if (isProduction && !explicitBypass) {
-        return jsonResponse({ success: false, message: "Server misconfigured: CAPTCHA secret key is not set." }, 500);
-      }
-
-      if (!explicitBypass) {
-        console.warn("TURNSTILE_SECRET_KEY is not configured. Skipping captcha verification. This should only be used for local development.");
-      }
-
+    if (explicitBypass) {
       captcha = { ok: true };
     } else {
-      captcha = await verifyTurnstile(String(captchaToken), { ip });
+      try {
+        captcha = await verifyTurnstile(String(captchaToken), { ip });
+      } catch (err) {
+        if (err.message === 'CAPTCHA_CONFIG_MISSING') {
+          if (!isProduction) {
+            console.warn("TURNSTILE_SECRET_KEY is not configured. Skipping captcha verification. This should only be used for local development.");
+            captcha = { ok: true };
+          } else {
+            console.error("Server misconfigured: CAPTCHA secret key is not set.");
+            return jsonResponse({ success: false, message: "We're having trouble verifying the CAPTCHA. Please try again later." }, 500);
+          }
+        } else {
+          throw err;
+        }
+      }
     }
 
     if (!captcha.ok) {
-      return jsonResponse({ success: false, message: captcha.error }, 400);
+      return jsonResponse({ success: false, message: captcha.error || "Captcha verification failed. Please try again." }, 400);
     }
 
     const normalizedEmail = normalizeEmail(email);
@@ -207,18 +319,19 @@ export async function POST(req) {
     }
 
     if (action === "signup") {
-      const serviceKey = process.env.SUPABASE_SERVICE_KEY
-        ? String(process.env.SUPABASE_SERVICE_KEY).trim()
-        : null;
-
+      const serviceKey = getValidKey(process.env.SUPABASE_SERVICE_KEY);
       if (!supabaseUrl || !serviceKey) {
         return jsonResponse({ success: false, message: "Auth server is not configured." }, 500);
       }
 
-      const { error } = await supabaseAdmin.auth.admin.createUser({
+      const admin = createClient(supabaseUrl, serviceKey);
+
+      const emailConfirm = process.env.AUTO_CONFIRM_EMAIL === "true";
+
+      const { error } = await admin.auth.admin.createUser({
         email,
         password,
-        email_confirm: true,
+        email_confirm: emailConfirm,
         user_metadata: { display_name: name },
       });
 
@@ -226,10 +339,18 @@ export async function POST(req) {
         return jsonResponse({ success: false, message: error.message }, 400);
       }
 
+      if (emailConfirm) {
+        return jsonResponse({
+          success: true,
+          message: "Signup successful. You can now log in!",
+          trigger: true,
+        });
+      }
+
       return jsonResponse({
         success: true,
-        message: "Signup successful. You can now log in!",
-        trigger: true,
+        message: "Signup successful! Please check your email to verify your account before logging in.",
+        trigger: false,
       });
     }
 
@@ -254,7 +375,11 @@ export async function POST(req) {
             },
             setAll(cookiesToSet) {
               cookiesToSet.forEach(({ name, value, options }) => {
-                cookieStore.set(name, value, options);
+                cookieStore.set(name, value, {
+                  ...options,
+                  sameSite: 'strict',
+                  secure: process.env.NODE_ENV === 'production',
+                });
               });
             },
           },

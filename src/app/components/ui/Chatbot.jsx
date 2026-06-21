@@ -358,6 +358,7 @@ function MessageBubble({ message }) {
             <ReactMarkdown remarkPlugins={[remarkGfm]} components={mdComponents}>
               {message.content}
             </ReactMarkdown>
+
             {message.isStreaming && (
               <span className="inline-block w-1.5 h-4 ml-0.5 bg-primary dark:bg-purple-400 rounded-full animate-pulse align-middle" />
             )}
@@ -756,7 +757,7 @@ export default function Chatbot() {
       </AnimatePresence>
 
       {/* ── Floating Trigger Button ─────────────────────────────────────────────── */}
-      <div className={`fixed bottom-4 sm:bottom-6 right-4 sm:right-6 z-[10000] ${isOpen ? "hidden sm:block" : "block"}`}>
+      <div className={`fixed bottom-3 right-3 sm:bottom-6 sm:right-6 z-[10000] ${isOpen ? "hidden sm:block" : "block"}`}>
         <motion.button
           onClick={() => setIsOpen((v) => !v)}
           whileHover={{ scale: 1.05 }}

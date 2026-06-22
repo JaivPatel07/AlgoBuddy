@@ -443,14 +443,10 @@ export default function ProfilePage() {
   const handleSubmit = async (event) => {
     event.preventDefault();
 
-    console.log("Saving:", formData);
-
     setSaving(true);
 
     try {
       const { data, error } = await supabase.auth.updateUser({ data: formData });
-
-      console.log("Updated user:", data?.user?.user_metadata);
 
       if (error) throw error;
 

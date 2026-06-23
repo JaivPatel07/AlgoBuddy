@@ -738,6 +738,26 @@ app.get("/health", (req, res) => {
   res.json({ status: "Arena Socket Server is running with Redis!" });
 });
 
+app.get("/api/matches/active", async (req, res) => {
+  try {
+    const matchKeys = await scanRedisKeys("{arena}:match:*");
+    const activeMatches = [];
+    for (const key of matchKeys) {
+      if (key.endsWith(":completed")) continue;
+      const matchStr = await redisClient.get(key);
+      if (matchStr) {
+        const match = JSON.parse(matchStr);
+        if (match.status === "in-progress") {
+          activeMatches.push(match);
+        }
+      }
+    }
+    res.json({ matches: activeMatches });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 server.listen(PORT, () => {
   console.log(`Arena Socket Server running on port ${PORT}`);
 });

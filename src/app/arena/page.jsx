@@ -114,6 +114,31 @@ export default function ArenaPage() {
     };
   }, [user, router]);
 
+  // Live Matches polling
+  const [liveMatches, setLiveMatches] = useState([]);
+
+  useEffect(() => {
+    const fetchLiveMatches = async () => {
+      try {
+        const socketUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+          ? "http://127.0.0.1:4000"
+          : "https://algobuddy-socket-server.onrender.com";
+          
+        const res = await fetch(`${socketUrl}/api/matches/active`);
+        if (res.ok) {
+          const data = await res.json();
+          setLiveMatches(data.matches || []);
+        }
+      } catch (err) {
+        console.error("Failed to fetch live matches:", err);
+      }
+    };
+
+    fetchLiveMatches();
+    const interval = setInterval(fetchLiveMatches, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Modals state
   const [matchmakingOpen, setMatchmakingOpen] = useState(false);
   const [createDuelOpen, setCreateDuelOpen] = useState(false);

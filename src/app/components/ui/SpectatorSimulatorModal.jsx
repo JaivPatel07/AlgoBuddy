@@ -41,6 +41,7 @@ export default function SpectatorSimulatorModal({ isOpen, onClose, matchData }) 
     });
 
     socket.on("opponent_typing_status", (data) => {
+      console.log("SPECTATOR RECEIVED TYPING STATUS", data);
       if (data.userId === p1.userId) {
         setP1Status(data.isTyping ? "Typing..." : "Idle");
       } else if (data.userId === p2.userId) {

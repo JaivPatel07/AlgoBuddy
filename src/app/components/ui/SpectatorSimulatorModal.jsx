@@ -3,6 +3,8 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Terminal, Eye } from "lucide-react";
 
+import { io } from "socket.io-client";
+
 export default function SpectatorSimulatorModal({ isOpen, onClose, matchData }) {
   const [seconds, setSeconds] = useState(0);
 
@@ -17,6 +19,61 @@ export default function SpectatorSimulatorModal({ isOpen, onClose, matchData }) 
 
   const [matchEnded, setMatchEnded] = useState(false);
   const [winnerId, setWinnerId] = useState(null);
+
+  // Socket Connection for real-time status
+  useEffect(() => {
+    if (!isOpen || !matchData?.matchId) return;
+
+    const socketUrl = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+      ? "http://127.0.0.1:4000"
+      : "https://algobuddy-socket-server.onrender.com";
+
+    const socket = io(socketUrl, {
+      query: {
+        userId: "spectator_" + Math.random().toString(36).substring(7),
+        username: "Spectator"
+      }
+    });
+
+    socket.on("connect", () => {
+      console.log("Spectator Socket Connected");
+      socket.emit("join_spectator", { matchId: matchData.matchId });
+    });
+
+    socket.on("opponent_typing_status", (data) => {
+      if (data.userId === p1.userId) {
+        setP1Status(data.isTyping ? "Typing..." : "Idle");
+      } else if (data.userId === p2.userId) {
+        setP2Status(data.isTyping ? "Typing..." : "Idle");
+      }
+    });
+
+    socket.on("opponent_test_submit", (data) => {
+      if (data.userId === p1.userId) setP1Status("Testing Code...");
+      if (data.userId === p2.userId) setP2Status("Testing Code...");
+    });
+
+    socket.on("opponent_test_result", (data) => {
+      if (data.userId === p1.userId) {
+        setP1Status("Idle");
+        setP1TestOutput(`Tests Passed: ${data.passed}/${data.total}`);
+      } else if (data.userId === p2.userId) {
+        setP2Status("Idle");
+        setP2TestOutput(`Tests Passed: ${data.passed}/${data.total}`);
+      }
+    });
+
+    socket.on("match_ended", (data) => {
+      setMatchEnded(true);
+      setWinnerId(data.winnerId);
+      if (data.winnerId === p1.userId) setP1Status("Finished");
+      if (data.winnerId === p2.userId) setP2Status("Finished");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [isOpen, matchData]);
 
   // Formatting time helper
   const formatTime = (secs) => {

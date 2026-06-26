@@ -17,11 +17,13 @@ export default function DuelSimulatorModal({ isOpen, onClose, opponent, currentU
   const [victoryState, setVictoryState] = useState(null); // "victory" or "defeat"
   const [isExecuting, setIsExecuting] = useState(false);
   const [socket, setSocket] = useState(null);
-  const [isInitializing, setIsInitializing] = useState(true);
+  const [language, setLanguage] = useState("javascript");
+  const [failedAttempts, setFailedAttempts] = useState(0);
 
   const logContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
   const opponentIdleTimerRef = useRef(null);
+  const keystrokesRef = useRef([]);
 
   // Formatting time helper
   const formatTime = (secs) => {
@@ -246,7 +248,15 @@ export default function DuelSimulatorModal({ isOpen, onClose, opponent, currentU
 
   const handleCodeChange = (value) => {
     setUserCode(value);
+    
+    const now = Date.now();
+    keystrokesRef.current.push(now);
+    keystrokesRef.current = keystrokesRef.current.filter(time => now - time < 5000);
+    const currentCpm = keystrokesRef.current.length * 12;
+
     if (socket && opponent?.matchId) {
+      const currentLines = value.split('\n').length;
+      
       // Clear existing timeout
       if (typingTimeoutRef.current) {
         clearTimeout(typingTimeoutRef.current);
@@ -254,7 +264,10 @@ export default function DuelSimulatorModal({ isOpen, onClose, opponent, currentU
         // If no timeout existed, we just started typing!
         socket.emit("typing_status", {
           matchId: opponent.matchId,
-          isTyping: true
+          isTyping: true,
+          linesCoded: currentLines,
+          cpm: currentCpm,
+          language: language
         });
       }
 
@@ -262,7 +275,10 @@ export default function DuelSimulatorModal({ isOpen, onClose, opponent, currentU
       typingTimeoutRef.current = setTimeout(() => {
         socket.emit("typing_status", {
           matchId: opponent.matchId,
-          isTyping: false
+          isTyping: false,
+          linesCoded: currentLines,
+          cpm: 0,
+          language: language
         });
         typingTimeoutRef.current = null;
       }, 1500);
@@ -277,7 +293,8 @@ export default function DuelSimulatorModal({ isOpen, onClose, opponent, currentU
     
     if (socket && opponent?.matchId) {
       socket.emit("test_submit", {
-        matchId: opponent.matchId
+        matchId: opponent.matchId,
+        failedAttempts: failedAttempts
       });
       addLog("You started executing code.");
     }
@@ -294,12 +311,17 @@ export default function DuelSimulatorModal({ isOpen, onClose, opponent, currentU
       setUserOutput(outText);
       addLog(`You received execution result: ${data.message || data.status}`);
 
+      const isSuccess = data.status === 3 || data.status === "SUCCESS";
+      const newFailedAttempts = isSuccess ? failedAttempts : failedAttempts + 1;
+      if (!isSuccess) setFailedAttempts(newFailedAttempts);
+
       if (socket && opponent?.matchId) {
         socket.emit("test_result", {
           matchId: opponent.matchId,
           status: data.status,
-          passed: (data.status === 3 || data.status === "SUCCESS") ? 1 : 0,
-          total: 1
+          passed: isSuccess ? 1 : 0,
+          total: 1,
+          failedAttempts: newFailedAttempts
         });
 
         if (data.status === 3 || data.status === "SUCCESS") {
@@ -340,6 +362,30 @@ export default function DuelSimulatorModal({ isOpen, onClose, opponent, currentU
           </div>
 
           <div className="flex items-center gap-6">
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Language</span>
+              <select 
+                value={language}
+                onChange={(e) => {
+                  setLanguage(e.target.value);
+                  if (socket && opponent?.matchId) {
+                    socket.emit("typing_status", {
+                      matchId: opponent.matchId,
+                      isTyping: true,
+                      linesCoded: userCode.split('\n').length,
+                      cpm: 0,
+                      language: e.target.value
+                    });
+                  }
+                }}
+                className="bg-slate-800 border border-slate-700 text-xs rounded px-2 py-1 outline-none text-slate-200"
+              >
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="cpp">C++</option>
+                <option value="java">Java</option>
+              </select>
+            </div>
             <div className="text-center">
               <span className="text-xs text-slate-400 block uppercase tracking-wider font-semibold">Time Elapsed</span>
               <span className="text-lg font-mono font-bold text-primary dark:text-purple-400">

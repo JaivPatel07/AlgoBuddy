@@ -561,6 +561,9 @@ io.on("connection", async (socket) => {
       console.log(`Player ${socket.data.userId} emitted typing_status to room ${data.matchId}`);
       socket.to(data.matchId).emit("opponent_typing_status", {
         isTyping: data.isTyping,
+        linesCoded: data.linesCoded,
+        cpm: data.cpm,
+        language: data.language,
         userId: socket.data.userId
       });
     } catch (error) {
@@ -574,7 +577,10 @@ io.on("connection", async (socket) => {
       const matchId = await redisClient.hget(`{arena}:socket:${socket.id}`, "matchId");
       if (!matchId || matchId !== data.matchId) return;
 
-      socket.to(data.matchId).emit("opponent_test_submit", { userId: socket.data.userId });
+      socket.to(data.matchId).emit("opponent_test_submit", { 
+        userId: socket.data.userId,
+        failedAttempts: data.failedAttempts
+      });
     } catch (error) {
       console.error(`[test_submit] Error for user ${socket.data.userId}:`, error);
     }
@@ -591,11 +597,31 @@ io.on("connection", async (socket) => {
         userId: socket.data.userId,
         passed: data.passed,
         total: data.total,
-        status: data.status
+        status: data.status,
+        failedAttempts: data.failedAttempts
       });
     } catch (error) {
       console.error(`[test_result] Error for user ${socket.data.userId}:`, error);
     }
+  });
+
+  socket.on("spectator_chat", (data) => {
+    if (!data.matchId || !data.message) return;
+    socket.to(data.matchId).emit("spectator_chat", {
+      userId: socket.data.userId,
+      username: socket.handshake.query.username || "Spectator",
+      message: data.message,
+      timestamp: Date.now()
+    });
+  });
+
+  socket.on("spectator_emote", (data) => {
+    if (!data.matchId || !data.emote) return;
+    socket.to(data.matchId).emit("spectator_emote", {
+      userId: socket.data.userId,
+      emote: data.emote,
+      timestamp: Date.now()
+    });
   });
 
   socket.on("match_complete", async (data) => {

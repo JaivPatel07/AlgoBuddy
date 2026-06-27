@@ -4,11 +4,13 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Terminal, Eye, MessageSquare, Send, AlertCircle } from "lucide-react";
 import { io } from "socket.io-client";
 import confetti from "canvas-confetti";
+import useArenaProfile from "@/app/hooks/useArenaProfile";
 
 const EMOTES = ["🔥", "👏", "🤯", "😂", "❤️"];
 
 export default function SpectatorSimulatorModal({ isOpen, onClose, matchData }) {
   const [seconds, setSeconds] = useState(0);
+  const { profile } = useArenaProfile();
 
   const p1 = matchData?.players?.[0] || { name: "Player 1" };
   const p2 = matchData?.players?.[1] || { name: "Player 2" };
@@ -62,8 +64,8 @@ export default function SpectatorSimulatorModal({ isOpen, onClose, matchData }) 
 
     const socket = io(socketUrl, {
       query: {
-        userId: "spectator_" + Math.random().toString(36).substring(7),
-        username: "Spectator_" + Math.floor(Math.random() * 1000)
+        userId: profile?.id || "spectator_" + Math.random().toString(36).substring(7),
+        username: profile?.username || "Spectator_" + Math.floor(Math.random() * 1000)
       }
     });
     socketRef.current = socket;
@@ -136,7 +138,7 @@ export default function SpectatorSimulatorModal({ isOpen, onClose, matchData }) 
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [isOpen, matchData]);
+  }, [isOpen, matchData, profile]);
 
   // Formatting time helper
   const formatTime = (secs) => {

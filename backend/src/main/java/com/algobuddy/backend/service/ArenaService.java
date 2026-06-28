@@ -126,7 +126,9 @@ public class ArenaService {
                 .orElse("User " + opponentId.toString().substring(0, 4));
         
         String result = "In Progress";
-        if (match.getWinnerId() != null) {
+        if (match.getStatus() == ArenaMatch.MatchStatus.EXPIRED) {
+            result = "Expired";
+        } else if (match.getWinnerId() != null) {
             result = match.getWinnerId().equals(requestingUserId) ? "Victory" : "Defeat";
         } else if (match.getEndTime() != null) {
             result = "Draw";
@@ -230,7 +232,8 @@ public class ArenaService {
     @Transactional
     public void expireStaleMatches() {
         LocalDateTime cutoff = LocalDateTime.now().minusHours(1);
-        int expired = matchRepository.expireStaleMatches(cutoff, ArenaMatch.MatchStatus.EXPIRED);
+        LocalDateTime now = LocalDateTime.now();
+        int expired = matchRepository.expireStaleMatches(cutoff, ArenaMatch.MatchStatus.EXPIRED, now);
         if (expired > 0) {
             log.info("Expired {} stale arena matches older than {}", expired, cutoff);
         }
@@ -257,6 +260,14 @@ public class ArenaService {
                 if (!existingMatch.getPlayer1Id().equals(requestingUserId) &&
                     !existingMatch.getPlayer2Id().equals(requestingUserId)) {
                     throw new SecurityException("User is not a participant in this match");
+                }
+
+                if (existingMatch.getStatus() == ArenaMatch.MatchStatus.EXPIRED) {
+                    throw new IllegalStateException("This match has expired and cannot accept results");
+                }
+
+                if (existingMatch.getStatus() == ArenaMatch.MatchStatus.COMPLETED) {
+                    return;
                 }
 
                 if (existingMatch.getWinnerId() != null) {

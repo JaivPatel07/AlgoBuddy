@@ -88,20 +88,23 @@ async function postProgressToServer(problemId, status) {
   if (isUsingSpringBoot()) {
     const headers = await getAuthHeader();
     if (!headers.Authorization) return;
-    await fetch(`${springBootBase()}/api/v1/practice/progress`, {
+    const res = await fetch(`${springBootBase()}/api/v1/practice/progress`, {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({ problemId, status }),
     });
-    return;
+    if (!res.ok) return null;
+    return await res.json();
   }
 
   // Supabase path
-  await fetch("/api/progress", {
+  const res = await fetch("/api/progress", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ problemId, status }),
   });
+  if (!res.ok) return null;
+  return await res.json(); // now returns currentStreak, longestStreak, etc.
 }
 
 /** Bulk-sync items that exist locally but not on the server */
@@ -181,6 +184,7 @@ export function useSheetProgress() {
   const { user } = useUser();
   const [progress, setProgress] = useState({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [streakData, setStreakData] = useState({
     current: 0,
     best: 0,
@@ -191,6 +195,9 @@ export function useSheetProgress() {
 
   // Track whether we've done the initial server sync to avoid double-syncing
   const syncedRef = useRef(false);
+
+  // Save previous progress for rollback on server failure
+  const prevProgressRef = useRef(null);
 
   // ── Load & sync on mount / user change ──────────────────────────────────
   useEffect(() => {
@@ -262,10 +269,10 @@ export function useSheetProgress() {
         writeLocal(authoritative);
         if (!cancelled) setProgress(authoritative);
 
-        // 5. Update streak state
+        // 5. Update streak state — server is authoritative for authenticated users.
         if (!cancelled) {
-          if (isUsingSpringBoot() && serverData.currentStreak !== undefined) {
-            // Spring Boot streak is authoritative
+          if (serverData.currentStreak !== undefined) {
+            // Both Spring Boot and Supabase paths now return currentStreak.
             setStreakData({
               current: serverData.currentStreak || 0,
               best: serverData.longestStreak || 0,
@@ -274,12 +281,17 @@ export function useSheetProgress() {
               monthlySolved: serverData.monthlySolved || 0,
             });
           } else {
+            // Server did not return streak fields — fall back to localStorage
+            // only as a last resort (e.g. unexpected API shape change).
             const localStreak = readLocalStreak();
             setStreakData((prev) => ({ ...prev, ...localStreak }));
           }
         }
       } catch (err) {
         console.error("[useSheetProgress] Server sync failed:", err);
+        if (!cancelled) {
+          setError(err.message || "Failed to load progress");
+        }
       }
 
       if (!cancelled) {
@@ -303,8 +315,10 @@ export function useSheetProgress() {
       setProgress(updated);
       writeLocal(updated);
 
-      // Update local streak on completion
-      if (newStatus === "Completed") {
+      // Update local streak on completion only for guests.
+      // Authenticated users get their streak from the server after the sync
+      // below, so updating localStorage here would cause divergence.
+      if (newStatus === "Completed" && !user) {
         const next = updateLocalStreak(streakData.current);
         setStreakData((prev) => ({
           ...prev,
@@ -315,23 +329,27 @@ export function useSheetProgress() {
 
       // Sync to server asynchronously
       if (user) {
+        prevProgressRef.current = progress;
         try {
-          await postProgressToServer(problemId, newStatus);
-          // After Spring Boot update, re-fetch fresh streak data
-          if (isUsingSpringBoot() && newStatus === "Completed") {
-            const fresh = await fetchProgressFromServer();
-            if (fresh) {
-              setStreakData({
-                current: fresh.currentStreak || 0,
-                best: fresh.longestStreak || 0,
-                dailySolved: fresh.dailySolved || 0,
-                weeklySolved: fresh.weeklySolved || 0,
-                monthlySolved: fresh.monthlySolved || 0,
-              });
-            }
+          const fresh = await postProgressToServer(problemId, newStatus);
+          if (!fresh) throw new Error("Server returned no data");
+          // Use server streak data returned from either path.
+          if (fresh.currentStreak !== undefined) {
+            setStreakData({
+              current: fresh.currentStreak || 0,
+              best: fresh.longestStreak || 0,
+              dailySolved: fresh.dailySolved || 0,
+              weeklySolved: fresh.weeklySolved || 0,
+              monthlySolved: fresh.monthlySolved || 0,
+            });
           }
+          prevProgressRef.current = null;
         } catch (err) {
-          console.error("[useSheetProgress] Failed to sync progress:", err);
+          console.error("[useSheetProgress] Failed to sync progress, rolling back:", err);
+          if (prevProgressRef.current) {
+            setProgress(prevProgressRef.current);
+            writeLocal(prevProgressRef.current);
+          }
         }
       }
     },
@@ -348,5 +366,5 @@ export function useSheetProgress() {
     [progress]
   );
 
-  return { progress, getStatus, updateProgress, streakData, loading };
+  return { progress, getStatus, updateProgress, streakData, loading, error };
 }

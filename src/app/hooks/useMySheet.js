@@ -40,9 +40,15 @@ function apiBase() {
 async function fetchMySheetFromServer() {
   if (isSpringBoot()) {
     const headers = await getAuthHeader();
-    if (!headers.Authorization) return null;
+    if (!headers.Authorization) {
+      console.warn("[useMySheet] fetch skipped: No authorization token");
+      return null;
+    }
     const res = await fetch(`${apiBase()}/api/v1/mysheet`, { headers });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      console.error("[useMySheet] fetch failed with status:", res.status);
+      return null;
+    }
     const data = await res.json();
     // Expect: { items: [ { problemId, addedAt, note } ] }
     const map = {};
@@ -54,7 +60,10 @@ async function fetchMySheetFromServer() {
 
   // Supabase path via Next.js API route
   const res = await fetch("/api/mysheet");
-  if (!res.ok) return null;
+  if (!res.ok) {
+    console.error("[useMySheet] fetch from NextJS failed with status:", res.status);
+    return null;
+  }
   const data = await res.json();
   return data.sheet || null;
 }
@@ -63,7 +72,7 @@ async function addToSheetOnServer(problemId, note = "") {
   if (isSpringBoot()) {
     const headers = await getAuthHeader();
     if (!headers.Authorization) return;
-    await fetch(`${apiBase()}/api/v1/mysheet`, {
+    const res = await fetch(`${apiBase()}/api/v1/mysheet`, {
       method: "POST",
       headers: { ...headers, "Content-Type": "application/json" },
       body: JSON.stringify({ problemId, note }),
@@ -82,7 +91,7 @@ async function removeFromSheetOnServer(problemId) {
   if (isSpringBoot()) {
     const headers = await getAuthHeader();
     if (!headers.Authorization) return;
-    await fetch(`${apiBase()}/api/v1/mysheet?problemId=${problemId}`, {
+    const res = await fetch(`${apiBase()}/api/v1/mysheet?problemId=${problemId}`, {
       method: "DELETE",
       headers,
     });

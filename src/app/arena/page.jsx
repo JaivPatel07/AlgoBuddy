@@ -29,7 +29,9 @@ import {
   Target,
   ChevronLeft,
   Users,
-  Calendar
+  Calendar,
+  TrendingDown,
+  Minus
 } from "lucide-react";
 import { useArenaProfile } from "@/app/hooks/useArenaProfile";
 import { useSheetProgress } from "@/app/hooks/useSheetProgress";
@@ -737,7 +739,11 @@ export default function ArenaPage() {
                               </div>
                               <span className="font-semibold text-slate-850 dark:text-neutral-200">{name}</span>
                             </div>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-3">
+                              {row.trend === "up" && <span className="text-emerald-500 font-bold flex items-center gap-0.5 text-[10px]"><TrendingUp size={12}/>{row.trendValue}</span>}
+                              {row.trend === "down" && <span className="text-red-500 font-bold flex items-center gap-0.5 text-[10px]"><TrendingDown size={12}/>{row.trendValue}</span>}
+                              {row.trend === "hot" && <span className="text-orange-500 font-bold flex items-center gap-0.5 text-[10px]"><Flame size={12}/>Streak</span>}
+                              {row.trend === "same" && <span className="text-slate-400 font-bold flex items-center gap-0.5 text-[10px]"><Minus size={12}/></span>}
                               {row.tier && getTierBadge(row.tier)}
                               <span className="font-bold text-primary">{row.rating} Rating</span>
                             </div>

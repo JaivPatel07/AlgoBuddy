@@ -139,6 +139,13 @@ export default function QuizPage() {
       href: "/visualizer/recursion/tower-of-hanoi/quiz",
       color: "bg-violet-600 hover:bg-violet-700",
     },
+    {
+      title: "Stack Operations Quiz",
+      description:
+        "Test your understanding of Push & Pop, Peek, Is Empty, and Is Full operations.",
+      href: "/visualizer/stack/quiz",
+      color: "bg-violet-600 hover:bg-violet-700",
+    },
   ];
 
   const [searchQuery, setSearchQuery] = useState("");

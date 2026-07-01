@@ -46,14 +46,6 @@ async function resolveSessionIdentifier(identifier) {
   return candidate;
 }
 
-function resolveSessionSecret(channelName) {
-  if (typeof channelName !== "string") return "";
-  const parts = channelName.split(":");
-  if (parts.length < 3) return "";
-  return sanitizeSessionText(parts.slice(2).join(":"), 240);
-}
-
-
 export function useCollaboration({
   displayName = "Anonymous",
   onRemoteStateDelta,
@@ -243,7 +235,7 @@ export function useCollaboration({
     const initialPresenterId = nextSession.presenterId || null;
     setPresenterId(initialPresenterId);
     presenterIdRef.current = initialPresenterId;
-    sessionSecretRef.current = sessionSecret || resolveSessionSecret(sessionChannelName);
+    sessionSecretRef.current = sessionSecret;
     sessionRef.current = nextSession;
     setSession(nextSession);
     setError(null);
@@ -300,8 +292,16 @@ export function useCollaboration({
       throw new Error("Session secret is unavailable.");
     }
 
+    // The presenter endpoint now validates the authenticated user server-side.
+    // sessionSecret is sent only as secondary verification; the server verifies
+    // the caller's identity via Supabase auth cookies.
+    const csrfToken = typeof document !== "undefined"
+      ? document.cookie.split("; ").find((c) => c.startsWith("csrf-token="))?.split("=")[1]
+      : null;
+
     await requestJson(`/api/sessions/${encodeURIComponent(activeSession.id)}/presenter`, {
       method: "POST",
+      headers: { "X-CSRF-Token": csrfToken || "" },
       body: JSON.stringify({ presenterId: presenter, sessionSecret }),
     });
 
@@ -338,7 +338,7 @@ export function useCollaboration({
       }),
     });
 
-    await attachSession(data.session, realtime.realtimeChannel, resolveSessionSecret(realtime.realtimeChannel));
+    await attachSession(data.session, realtime.realtimeChannel, "");
     return data;
   }, [attachSession]);
 
